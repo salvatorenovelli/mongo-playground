@@ -1,3 +1,4 @@
+const util = require('util');
 const MongoConsole = require("./MongoConsole.js");
 const Entities = require('html-entities').AllHtmlEntities;
 const c = require('ansi-colors');
@@ -5,7 +6,13 @@ const entities = new Entities();
 
 let mongoConsole = new MongoConsole();
 
-var pattern = /&#?[\w\d]+;/g;
+String.prototype.replaceAll = function (search, replacement) {
+    var target = this;
+    return target.replace(new RegExp(search, 'g'), replacement);
+};
+
+// var pattern = /&#?[\w\d]+;/g;
+var pattern = /[\n\r]/g;
 
 var query = {
     $or: [
@@ -22,18 +29,14 @@ var query = {
 
 (async function () {
     for (let i = 0; i < 1; i++) {
-        console.log("Processing block: " + i)
-        let recordUpdated = await nextBlock();
+        console.log("Processing block: " + i);
+        let recordUpdated = await processNextBulk();
         console.log("Updated ", recordUpdated, " records")
     }
 })();
 
 
-function getBulkSizeDescription(bulk) {
-    return bytesToSize(bulk.s.currentBatch.sizeBytes) + " / " + bytesToSize(bulk.s.maxBatchSizeBytes);
-}
-
-async function nextBlock() {
+async function processNextBulk() {
 
     let totalUpdates = 0;
     let skipNotified = false;
@@ -47,9 +50,13 @@ async function nextBlock() {
             }
         }
 
-        if (bulk.s.maxBatchSizeBytes - bulk.s.currentBatch.sizeBytes > 20000) {
+        if (bulk.s.maxBatchSizeBytes - bulk.s.currentBatch.sizeBytes > 100000) {
 
-            console.log("Bulk Size", getBulkSizeDescription(bulk), " -- URL:", result.uri, result._id,);
+
+            process.stdout.write("\rBulk Size " + getBulkSizeDescription(bulk) + " -- URL: " + result.uri + " " + result._id);
+            // console.log(
+            // console.log(highlight(util.inspect(result, {colors: true, depth: 4})));
+
             result.title = sanitizeField("Title", result.title);
             result.metaDescriptions = sanitizeField("Meta Description", result.metaDescriptions);
             result.h1s = sanitizeField("H1", result.h1s);
@@ -62,15 +69,19 @@ async function nextBlock() {
             totalUpdates++;
         } else {
             if (!skipNotified) {
-                console.log("Max bulk size exceeded skipping this...");
+                console.log("\nMax bulk size exceeded skipping this...");
                 skipNotified = true;
             }
         }
 
     }, 7000);
 
-
+    console.log("")
     return totalUpdates;
+}
+
+function getBulkSizeDescription(bulk) {
+    return bytesToSize(bulk.s.currentBatch.sizeBytes) + " / " + bytesToSize(bulk.s.maxBatchSizeBytes);
 }
 
 function bytesToSize(bytes) {
@@ -104,8 +115,16 @@ function highlight(str) {
     });
 }
 
+function removeDoubleSpaces(str) {
+    return str.replaceAll("[ ]{2,}", " ");
+}
+
+function removeLineBreaks(str) {
+    return str.replaceAll("[\\n\\r]", " ");
+}
+
 function sanitize(string) {
-    return entities.decode(string).trim();
+    return removeDoubleSpaces(removeLineBreaks(entities.decode(string))).trim();
 }
 
 

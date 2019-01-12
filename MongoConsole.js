@@ -33,10 +33,11 @@ module.exports = class MongoConsole {
 
             await bulk.execute();
 
+            console.log("")
             console.timeEnd("query");
 
         } catch (err) {
-            console.log(err.stack);
+            console.error(err.stack);
         }
 
         return client.close(false);
