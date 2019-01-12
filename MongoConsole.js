@@ -16,7 +16,6 @@ module.exports = class MongoConsole {
 
     async find(query, forEachCallback, skip = 0, limit = 0) {
 
-        console.time("query");
 
         const client = new MongoClient(url, {useNewUrlParser: true});
 
@@ -28,13 +27,17 @@ module.exports = class MongoConsole {
             let bulk = collection.initializeUnorderedBulkOp();
 
             const docs = await collection.find(query).skip(skip).limit(limit).toArray();
-
+    
+            console.time("query");
             docs.forEach(results => forEachCallback(results, collection, bulk));
-
-            await bulk.execute();
-
             console.log("");
             console.timeEnd("query");
+
+	    console.time("bulk");
+            await bulk.execute();
+	    console.timeEnd("bulk");
+
+
 
         } catch (err) {
             console.error(err.stack);
