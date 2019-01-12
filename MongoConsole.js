@@ -8,31 +8,40 @@ console.logj = (obj) => console.log(highlight(JSON.stringify(obj, null, 4), {lan
 const MongoClient = require('mongodb').MongoClient;
 
 
-let url = "mongodb://localhost:9000";
-
+const url = "mongodb://localhost:9000";
+const dbName = 'test-website-versioning';
 
 module.exports = class MongoConsole {
 
 
     async find(query, forEachCallback, limit = 0) {
-        console.time("query");
-        MongoClient.connect(url, {useNewUrlParser: true}, function (err, connection) {
-            if (err) throw err;
 
-            const db = connection.db('test-website-versioning');
-            let collection = db.collection("pageSnapshot");
+        console.time("query");
+
+        const client = new MongoClient(url, {useNewUrlParser: true});
+
+        try {
+            await client.connect();
+            console.log("Connected correctly to server");
+            const db = client.db(dbName);
+            const collection = db.collection('pageSnapshot');
             let bulk = collection.initializeUnorderedBulkOp();
 
-            collection
-                .find(query).limit(limit)
-                .toArray(async (err, results) => {
-                    if (err) throw err;
-                    results.forEach(results => forEachCallback(results, collection, bulk));
-                    console.timeEnd("query");
-                    await bulk.execute();
-                    await connection.close(false);
-                })
-        });
+            const docs = await collection.find(query).limit(limit).toArray();
+
+            docs.forEach(results => forEachCallback(results, collection, bulk));
+
+            await bulk.execute();
+
+            console.timeEnd("query");
+
+        } catch (err) {
+            console.log(err.stack);
+        }
+
+        return client.close(false);
+
+
     }
 };
 

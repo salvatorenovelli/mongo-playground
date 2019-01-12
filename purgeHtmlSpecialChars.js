@@ -20,20 +20,30 @@ var query = {
 // var bulk = db.monitoredUri.initializeUnorderedBulkOp();
 
 
-mongoConsole.find(query, (result, collection, bulk) => {
+(async function () {
+    for (let i = 0; i < 1; i++) {
+        console.log("Processing block: " + i)
+        await nextBlock();
+    }
+})();
 
-    console.log("\nAnalyzing URL:", result.uri);
-    result.title = sanitizeField("Title", result.title);
-    result.metaDescriptions = sanitizeField("Meta Description", result.metaDescriptions);
-    result.h1s = sanitizeField("H1", result.h1s);
-    result.h2s = sanitizeField("H2", result.h2s);
 
-    // console.log("New value is:")
-    // console.logj(result);
+async function nextBlock() {
+    return mongoConsole.find(query, (result, collection, bulk) => {
 
-    bulk.find({"_id": result._id}).upsert().updateOne(result);
+        console.log("Analyzing URL:", result.uri, result._id);
+        result.title = sanitizeField("Title", result.title);
+        result.metaDescriptions = sanitizeField("Meta Description", result.metaDescriptions);
+        result.h1s = sanitizeField("H1", result.h1s);
+        result.h2s = sanitizeField("H2", result.h2s);
 
-}, 2495);
+        // console.log("New value is:")
+        // console.logj(result);
+
+        bulk.find({"_id": result._id}).updateOne(result);
+
+    }, 5000);
+}
 
 
 function sanitizeField(fieldName, field) {
@@ -48,9 +58,9 @@ function sanitizeField(fieldName, field) {
 
 function sanitizeItem(fieldName, item) {
     let sanitized = sanitize(item);
-    if (item !== sanitized) {
-        console.log("Changing " + fieldName + ":\n\t", "'" + highlight(item) + "'", "\n\t " + "'" + sanitize(item) + "'");
-    }
+    // if (item !== sanitized) {
+    //     console.log("Changing " + fieldName + ":\n\t", "'" + highlight(item) + "'", "\n\t " + "'" + sanitize(item) + "'");
+    // }
     return sanitized;
 }
 
