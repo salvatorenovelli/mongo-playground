@@ -14,7 +14,7 @@ const dbName = 'test-website-versioning';
 module.exports = class MongoConsole {
 
 
-    async find(query, forEachCallback, limit = 0) {
+    async find(query, forEachCallback, skip = 0, limit = 0) {
 
         console.time("query");
 
@@ -27,13 +27,13 @@ module.exports = class MongoConsole {
             const collection = db.collection('pageSnapshot');
             let bulk = collection.initializeUnorderedBulkOp();
 
-            const docs = await collection.find(query).limit(limit).toArray();
+            const docs = await collection.find(query).skip(skip).limit(limit).toArray();
 
             docs.forEach(results => forEachCallback(results, collection, bulk));
 
             await bulk.execute();
 
-            console.log("")
+            console.log("");
             console.timeEnd("query");
 
         } catch (err) {

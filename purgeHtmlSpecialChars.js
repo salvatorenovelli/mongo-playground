@@ -28,15 +28,20 @@ var query = {
 
 
 (async function () {
-    for (let i = 0; i < 1; i++) {
-        console.log("Processing block: " + i);
-        let recordUpdated = await processNextBulk();
+
+    const total = 467481.0;
+    const pageSize = 5000.0;
+
+    let totalPages = Math.ceil(total / pageSize);
+    for (let i = 0; i < totalPages; i++) {
+        console.log("Processing page: " + i + "/" + totalPages);
+        let recordUpdated = await processNextBulk(pageSize * i, pageSize);
         console.log("Updated ", recordUpdated, " records")
     }
 })();
 
 
-async function processNextBulk() {
+async function processNextBulk(skip = 0, limit = 0) {
 
     let totalUpdates = 0;
     let skipNotified = false;
@@ -74,9 +79,9 @@ async function processNextBulk() {
             }
         }
 
-    }, 7000);
+    }, skip, limit);
 
-    console.log("")
+    console.log("");
     return totalUpdates;
 }
 
