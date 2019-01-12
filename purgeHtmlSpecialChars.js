@@ -23,7 +23,8 @@ var query = {
 (async function () {
     for (let i = 0; i < 1; i++) {
         console.log("Processing block: " + i)
-        await nextBlock();
+        let recordUpdated = await nextBlock();
+        console.log("Updated ", recordUpdated, " records")
     }
 })();
 
@@ -33,7 +34,11 @@ function getBulkSizeDescription(bulk) {
 }
 
 async function nextBlock() {
-    return mongoConsole.find(query, (result, collection, bulk) => {
+
+    let totalUpdates = 0;
+    let skipNotified = false;
+
+    await mongoConsole.find(query, (result, collection, bulk) => {
 
         //console.logj(bulk);
         if (bulk.s.currentBatch == null) {
@@ -42,7 +47,7 @@ async function nextBlock() {
             }
         }
 
-        if (bulk.s.maxBatchSizeBytes - bulk.s.currentBatch.sizeBytes > 3000) {
+        if (bulk.s.maxBatchSizeBytes - bulk.s.currentBatch.sizeBytes > 20000) {
 
             console.log("Bulk Size", getBulkSizeDescription(bulk), " -- URL:", result.uri, result._id,);
             result.title = sanitizeField("Title", result.title);
@@ -54,20 +59,26 @@ async function nextBlock() {
             // console.logj(result);
 
             bulk.find({"_id": result._id}).updateOne(result);
+            totalUpdates++;
         } else {
-            // console.log("Max bulk size exceeded skipping this...")
+            if (!skipNotified) {
+                console.log("Max bulk size exceeded skipping this...");
+                skipNotified = true;
+            }
         }
 
+    }, 7000);
 
-    }, 100000);
+
+    return totalUpdates;
 }
 
 function bytesToSize(bytes) {
-    var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    if (bytes == 0) return '0 Byte';
-    var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+    let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    if (bytes === 0) return '0 Byte';
+    let i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
     return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
-};
+}
 
 function sanitizeField(fieldName, field) {
     if (Array.isArray(field)) {
