@@ -14,20 +14,23 @@ let url = "mongodb://localhost:9000";
 module.exports = class MongoConsole {
 
 
-    find(query, forEachCallback, limit = 0) {
+    async find(query, forEachCallback, limit = 0) {
         console.time("query");
         MongoClient.connect(url, {useNewUrlParser: true}, function (err, connection) {
             if (err) throw err;
 
             const db = connection.db('test-website-versioning');
             let collection = db.collection("pageSnapshot");
+            let bulk = collection.initializeUnorderedBulkOp();
+
             collection
                 .find(query).limit(limit)
-                .toArray((err, results) => {
+                .toArray(async (err, results) => {
                     if (err) throw err;
-                    results.forEach(results => forEachCallback(results, collection));
+                    results.forEach(results => forEachCallback(results, collection, bulk));
                     console.timeEnd("query");
-                    connection.close();
+                    await bulk.execute();
+                    await connection.close(false);
                 })
         });
     }

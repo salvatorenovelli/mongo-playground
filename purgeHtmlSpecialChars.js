@@ -5,9 +5,9 @@ const entities = new Entities();
 
 let mongoConsole = new MongoConsole();
 
-const pattern = /&#?[\w\d]+;/g;
+var pattern = /&#?[\w\d]+;/g;
 
-let query = {
+var query = {
     $or: [
         {"title": pattern},
         {"metaDescriptions": pattern},
@@ -17,9 +17,11 @@ let query = {
 };
 
 
-mongoConsole.find(query, (result, collection) => {
+// var bulk = db.monitoredUri.initializeUnorderedBulkOp();
 
-    // result.title = "&lt;&gt;&quot;&apos;&amp;&copy;&reg;&#8710;";
+
+mongoConsole.find(query, (result, collection, bulk) => {
+
     console.log("\nAnalyzing URL:", result.uri);
     result.title = sanitizeField("Title", result.title);
     result.metaDescriptions = sanitizeField("Meta Description", result.metaDescriptions);
@@ -29,11 +31,9 @@ mongoConsole.find(query, (result, collection) => {
     // console.log("New value is:")
     // console.logj(result);
 
-    collection.replaceOne(
-        {"_id": result._id}, result
-    );
+    bulk.find({"_id": result._id}).upsert().updateOne(result);
 
-}, 100);
+}, 2495);
 
 
 function sanitizeField(fieldName, field) {
