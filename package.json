@@ -4,9 +4,11 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
+    "ansi-colors": "^3.2.3",
     "cli-highlight": "^2.0.0",
     "colors": "latest",
     "deep-equal": "^1.0.1",
+    "html-entities": "^1.2.1",
     "mongodb": "^3.1.10"
   }
 }
