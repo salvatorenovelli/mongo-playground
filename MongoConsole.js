@@ -2,8 +2,8 @@
 const highlight = require('cli-highlight').highlight;
 const util = require('util');
 
-// console.logj = (obj) => console.log(util.inspect(obj, {colors: true, depth: 4}));
-console.logj = (obj) => console.log(highlight(JSON.stringify(obj, null, 4), {language: 'json', ignoreIllegals: true}));
+console.logj = (obj) => console.log(util.inspect(obj, {colors: true, depth: 4}));
+// console.logj = (obj) => console.log(highlight(JSON.stringify(obj, null, 4), {language: 'json', ignoreIllegals: true}));
 
 const MongoClient = require('mongodb').MongoClient;
 
