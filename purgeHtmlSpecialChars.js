@@ -24,24 +24,20 @@ var query = {
 };
 
 
-// var bulk = db.monitoredUri.initializeUnorderedBulkOp();
-
-
 (async function () {
 
-    const total = 467481.0;
     const pageSize = 5000.0;
 
-    let totalPages = Math.ceil(total / pageSize);
-    for (let i = 0; i < totalPages; i++) {
-        console.log("Processing page: " + i + "/" + totalPages);
-        let recordUpdated = await processNextBulk(pageSize * i, pageSize);
+    for (let i = 0; i < 100; i++) {
+        console.log("Processing page: " + i);
+        let recordUpdated = await processNextPage(0, pageSize);
         console.log("Updated ", recordUpdated, " records")
     }
+
 })();
 
 
-async function processNextBulk(skip = 0, limit = 0) {
+async function processNextPage(skip = 0, limit = 0) {
 
     let totalUpdates = 0;
     let skipNotified = false;
