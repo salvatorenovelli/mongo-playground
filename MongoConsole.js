@@ -20,23 +20,30 @@ module.exports = class MongoConsole {
         const client = new MongoClient(url, {useNewUrlParser: true});
 
         try {
+            console.time("connect");
             await client.connect();
             console.log("Connected correctly to server");
+            console.timeEnd("connect");
+
+            console.time("initbulk");
             const db = client.db(dbName);
             const collection = db.collection('pageSnapshot');
             let bulk = collection.initializeUnorderedBulkOp();
+            console.timeEnd("initbulk");
 
-            const docs = await collection.find(query).skip(skip).limit(limit).toArray();
-    
             console.time("query");
-            docs.forEach(results => forEachCallback(results, collection, bulk));
-            console.log("");
+            const docs = await collection.find(query).skip(skip).limit(limit).toArray();
             console.timeEnd("query");
 
-	    console.time("bulk");
-            await bulk.execute();
-	    console.timeEnd("bulk");
 
+            console.time("processing");
+            docs.forEach(results => forEachCallback(results, collection, bulk));
+            console.timeEnd("processing");
+
+
+            console.time("executebulk");
+            await bulk.execute();
+            console.timeEnd("executebulk");
 
 
         } catch (err) {

@@ -12,7 +12,8 @@ String.prototype.replaceAll = function (search, replacement) {
 };
 
 // var pattern = /&#?[\w\d]+;/g;
-var pattern = /[\n\r]/g;
+// var pattern = /[\n\r]/g;
+var pattern = /[ ]{2,}/g;
 
 var query = {
     $or: [
@@ -29,9 +30,12 @@ var query = {
     const pageSize = 5000.0;
 
     for (let i = 0; i < 100; i++) {
-        console.log("Processing page: " + i);
+        console.log("\n\nProcessing page: " + i);
+        console.time("page");
         let recordUpdated = await processNextPage(0, pageSize);
         console.log("Updated ", recordUpdated, " records")
+        console.timeEnd("page");
+
     }
 
 })();
@@ -54,7 +58,7 @@ async function processNextPage(skip = 0, limit = 0) {
         if (bulk.s.maxBatchSizeBytes - bulk.s.currentBatch.sizeBytes > 100000) {
 
 
-            process.stdout.write("\rBulk Size " + getBulkSizeDescription(bulk) + " -- URL: " + result.uri + " " + result._id);
+            // process.stdout.write("\nBulk Size " + getBulkSizeDescription(bulk) + " -- URL: " + result.uri + " " + result._id);
             // console.log(
             // console.log(highlight(util.inspect(result, {colors: true, depth: 4})));
 
@@ -77,7 +81,7 @@ async function processNextPage(skip = 0, limit = 0) {
 
     }, skip, limit);
 
-    console.log("");
+
     return totalUpdates;
 }
 
