@@ -33,9 +33,8 @@ var query = {
         console.log("\n\nProcessing page: " + i);
         console.time("page");
         let recordUpdated = await processNextPage(0, pageSize);
-        console.log("Updated ", recordUpdated, " records")
+        console.log("Updated ", recordUpdated, " records");
         console.timeEnd("page");
-
     }
 
 })();
@@ -74,7 +73,7 @@ async function processNextPage(skip = 0, limit = 0) {
             totalUpdates++;
         } else {
             if (!skipNotified) {
-                console.log("\nMax bulk size exceeded skipping this...");
+                console.log("Max bulk size exceeded skipping this...");
                 skipNotified = true;
             }
         }
