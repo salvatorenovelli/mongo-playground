@@ -2,7 +2,7 @@
 const highlight = require('cli-highlight').highlight;
 const util = require('util');
 const deepEqual = require("deep-equal");
-const async = require("async");
+
 
 console.logj = (obj) => console.log(util.inspect(obj, {colors: true, depth: 4}));
 // console.logj = (obj) => console.log(highlight(JSON.stringify(obj, null, 4), {language: 'json', ignoreIllegals: true}));
