@@ -2,6 +2,7 @@
 const highlight = require('cli-highlight').highlight;
 const util = require('util');
 const deepEqual = require("deep-equal");
+const async = require("async");
 
 console.logj = (obj) => console.log(util.inspect(obj, {colors: true, depth: 4}));
 // console.logj = (obj) => console.log(highlight(JSON.stringify(obj, null, 4), {language: 'json', ignoreIllegals: true}));
@@ -90,6 +91,12 @@ function createIncrementalSnapshot(prev, cur, index, lastCrawl) {
     return mapped;
 }
 
+async function asyncForEach(array, callback) {
+    for (let index = 0; index < array.length; index++) {
+        await callback(array[index], index, array);
+    }
+}
+
 (async function () {
     try {
 
@@ -109,44 +116,41 @@ function createIncrementalSnapshot(prev, cur, index, lastCrawl) {
 
         let done = 0;
 
+        let monitoredUris = await monitoredUriColl.find({}).project({uri: 1}).toArray();
 
-        // noinspection JSIgnoredPromiseFromCall
-        monitoredUriColl.find({})
-            .limit(1000)
-            .project({uri: 1})
-            .forEach(async function (monitoredUri) {
+        let tot = monitoredUris.length;
 
 
+        await asyncForEach(monitoredUris, async (monitoredUri) => {
+
+            // let snapshotCount = await pageSnapshotColl.find({uri: monitoredUri.uri}).sort({createDate: 1}).count();
+            console.log("Fetching snapshots: " + monitoredUri.uri + "\n");
+            let snapshots = await pageSnapshotColl.find({uri: monitoredUri.uri}).sort({createDate: 1}).toArray();
+
+            let lastCrawl;
+
+            let map = snapshots.map((item, index) => {
+
+                if (index === 0) {
+                    lastCrawl = mapSnapshotToCrawl(item);
+                } else {
+                    lastCrawl = createIncrementalSnapshot(snapshots[index - 1], item, index, lastCrawl);
+                }
+
+                return lastCrawl;
+
+            });
+
+            await pageCrawlCollection.insertMany(map);
+
+            console.log("completed: ", ++done, "/" + tot)
+        });
 
 
-
-                let snapshots = await pageSnapshotColl.find({uri: monitoredUri.uri}).sort({createDate: 1}).toArray();
-                // let snapshotCount = await pageSnapshotColl.find({uri: monitoredUri.uri}).sort({createDate: 1}).count();
-                console.log("URL: " + monitoredUri.uri + "\n")
-
-                let lastCrawl;
-
-                let map = snapshots.map((item, index) => {
-
-                    if (index === 0) {
-                        lastCrawl = mapSnapshotToCrawl(item);
-                    } else {
-                        lastCrawl = createIncrementalSnapshot(snapshots[index - 1], item, index, lastCrawl);
-                    }
-
-                    return lastCrawl;
-
-                });
-
-                await pageCrawlCollection.insertMany(map);
-
-                console.log("completed: ", ++done, "/10000")
+        console.log("Done")
 
 
-            }, printError);
-
-
-        //await client.close(false);
+        // return client.close(false);
     } catch (err) {
         console.error(err.stack);
     }
