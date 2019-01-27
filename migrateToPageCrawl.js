@@ -60,7 +60,7 @@ function mapSnapshotToCrawl(snapshot) {
         .filter(key => !ignoredFields.contains(key))
         .map(key => {
             if (mappedFields.contains(key)) {
-                return {key: key, value: {value: snapshot[key]}};
+                return {key: key, value: {value: snapshot[key]||null}};
             } else {
                 if (typeof snapshot[key] === "undefined" && optionalFields.contains(key)) {
                     return {key: null};
@@ -75,7 +75,7 @@ function mapSnapshotToCrawl(snapshot) {
         }, {});
 }
 
-function createIncrementalSnapshot(prev, cur, index, lastCrawl) {
+function createIncrementalSnapshot(prevSnapshot, curSnapshot, index, lastCrawl) {
 
     let mapped = allFields
         .filter(key => !ignoredFields.contains(key))
@@ -83,17 +83,12 @@ function createIncrementalSnapshot(prev, cur, index, lastCrawl) {
             if (mappedFields.contains(key)) {
 
 
-                if (deepEqual(cur[key], prev[key])) {
+                if (deepEqual(curSnapshot[key], prevSnapshot[key])) {
 
-
-                    if (typeof lastCrawl[key] === "undefined") {
-                        console.log("")
-                    }
-
-                    if (lastCrawl[key].value) {
+                    if (typeof lastCrawl[key].value !== "undefined") {
                         return {
                             key: key,
-                            value: {reference: prev._id}
+                            value: {reference: prevSnapshot._id}
                         };
                     }
 
@@ -103,15 +98,15 @@ function createIncrementalSnapshot(prev, cur, index, lastCrawl) {
                     };
                 } else {
                     // console.log("Diff in key " + key + " index " + index + " date: " + cur.createDate.toISOString().split('T')[0]);
-                    return {key: key, value: {value: cur[key]}};
+                    return {key: key, value: {value: curSnapshot[key]}};
                 }
 
 
             } else {
-                if (typeof cur[key] === "undefined" && optionalFields.contains(key)) {
+                if (typeof curSnapshot[key] === "undefined" && optionalFields.contains(key)) {
                     return {key: null};
                 }
-                return {key: key, value: cur[key]};
+                return {key: key, value: curSnapshot[key]};
             }
         })
 
