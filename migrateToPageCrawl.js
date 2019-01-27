@@ -17,6 +17,17 @@ Array.prototype.contains = function (element) {
     return this.indexOf(element) > -1;
 };
 
+Array.prototype.in = function (other) {
+    if (this === other) return true;
+    if (other == null) return false;
+
+
+    for (let i = 0; i < this.length; ++i) {
+        if (!other.contains(this[i])) return false;
+    }
+    return true;
+};
+
 
 const MongoClient = require('mongodb').MongoClient;
 
@@ -31,20 +42,33 @@ const printError = mongoError => {
         console.error(mongoError);
 };
 
+const allFields = ["_id", "createDate", "uri", "redirectChainElements", "title", "h1s", "h2s", "metaDescriptions", "canonicals", "_class", "crawlStatus"];
+
+
 const ignoredFields = ["_class"];
+const optionalFields = ["crawlStatus"];
+
 const mappedFields = ["redirectChainElements", "title", "h1s", "h2s", "metaDescriptions", "canonicals"];
 
 function mapSnapshotToCrawl(snapshot) {
 
-    return Object.keys(snapshot)
+    if (!Object.keys(snapshot).in(allFields)) {
+        throw Error("There are more fields than predicted!" + Object.keys(snapshot));
+    }
+
+    return allFields
         .filter(key => !ignoredFields.contains(key))
         .map(key => {
             if (mappedFields.contains(key)) {
                 return {key: key, value: {value: snapshot[key]}};
             } else {
+                if (typeof snapshot[key] === "undefined" && optionalFields.contains(key)) {
+                    return {key: null};
+                }
                 return {key: key, value: snapshot[key]};
             }
         })
+        .filter(v => v.key != null)
         .reduce((previousValue, currentValue) => {
             previousValue[currentValue.key] = currentValue.value;
             return previousValue;
@@ -53,13 +77,18 @@ function mapSnapshotToCrawl(snapshot) {
 
 function createIncrementalSnapshot(prev, cur, index, lastCrawl) {
 
-    let mapped = Object.keys(cur)
+    let mapped = allFields
         .filter(key => !ignoredFields.contains(key))
         .map(key => {
             if (mappedFields.contains(key)) {
 
 
                 if (deepEqual(cur[key], prev[key])) {
+
+
+                    if (typeof lastCrawl[key] === "undefined") {
+                        console.log("")
+                    }
 
                     if (lastCrawl[key].value) {
                         return {
@@ -79,9 +108,14 @@ function createIncrementalSnapshot(prev, cur, index, lastCrawl) {
 
 
             } else {
+                if (typeof cur[key] === "undefined" && optionalFields.contains(key)) {
+                    return {key: null};
+                }
                 return {key: key, value: cur[key]};
             }
         })
+
+        .filter(v => v.key != null)
         .reduce((previousValue, currentValue) => {
             previousValue[currentValue.key] = currentValue.value;
             return previousValue;
@@ -100,6 +134,9 @@ async function asyncForEach(array, callback) {
 (async function () {
     try {
 
+
+        const filter = {uri: "https://uk.braun.com/en-gb/female-hair-removal/all-about-beautiful-skin/how-to-remove-facial-hair"};
+
         const client = new MongoClient(url, {useNewUrlParser: true});
 
         await client.connect();
@@ -111,12 +148,12 @@ async function asyncForEach(array, callback) {
         const pageSnapshotColl = db.collection("pageSnapshot");
         const pageCrawlCollection = db.collection("pageCrawl");
 
-        await pageCrawlCollection.deleteMany({});
+        await pageCrawlCollection.deleteMany(filter);
 
 
         let done = 0;
 
-        let monitoredUris = await monitoredUriColl.find({}).project({uri: 1}).toArray();
+        let monitoredUris = await monitoredUriColl.find(filter).project({uri: 1}).toArray();
 
         let tot = monitoredUris.length;
 
@@ -141,7 +178,11 @@ async function asyncForEach(array, callback) {
 
             });
 
-            await pageCrawlCollection.insertMany(map);
+            if (map.length > 0) {
+                await pageCrawlCollection.insertMany(map);
+            } else {
+                console.error("Nothing to do with:", monitoredUri.uri)
+            }
 
             console.log("completed: ", ++done, "/" + tot)
         });
