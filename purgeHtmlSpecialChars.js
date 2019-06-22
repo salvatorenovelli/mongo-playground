@@ -17,12 +17,25 @@ String.prototype.replaceAll = function (search, replacement) {
 // var pattern = /[ ]{2,}/g;
 var pattern = /</g;
 
-var query = {
+var queryPageCrawl = {
     $or: [
         {"title.value": pattern},
         {"metaDescriptions.value": pattern},
         {"h1s.value": pattern},
         {"h2s.value": pattern}
+    ]
+};
+
+var queryMonitoredUri = {
+    $or: [
+        {"currentValue.title": pattern},
+        {"currentValue.metaDescriptions": pattern},
+        {"currentValue.h1s": pattern},
+        {"currentValue.h2s": pattern},
+        {"recommendation.title": pattern},
+        {"recommendation.metaDescriptions": pattern},
+        {"recommendation.h1s": pattern},
+        {"recommendation.h2s": pattern},
     ]
 };
 
@@ -47,7 +60,7 @@ async function processNextPage(skip = 0, limit = 0) {
     let totalUpdates = 0;
     let skipNotified = false;
 
-    await mongoConsole.find(query, (result, collection, bulk) => {
+    await mongoConsole.find(queryMonitoredUri, (result, collection, bulk) => {
 
         //console.logj(bulk);
         if (bulk.s.currentBatch == null) {
@@ -63,7 +76,7 @@ async function processNextPage(skip = 0, limit = 0) {
             // console.log(
             // console.log(highlight(util.inspect(result, {colors: true, depth: 4})));
 
-            sanitizePageCrawl(result);
+            sanitizeMonitoredUri(result);
 
             // console.log("New value is:")
             // console.logj(result);
@@ -83,18 +96,26 @@ async function processNextPage(skip = 0, limit = 0) {
     return totalUpdates;
 }
 
-function sanitizePageCrawl(result) {
-    if(result.title.value) result.title.value = sanitizeField("Title", result.title.value);
-    if(result.metaDescriptions.value) result.metaDescriptions.value = sanitizeField("Meta Description", result.metaDescriptions.value);
-    if(result.h1s.value) result.h1s.value = sanitizeField("H1", result.h1s.value);
-    if(result.h2s.value) result.h2s.value = sanitizeField("H2", result.h2s.value);
+function sanitizeMonitoredUri(muri) {
+
+
+    if (muri.currentValue) update(muri.currentValue);
+    if (muri.recommendation) update(muri.recommendation);
+
 }
 
-function sanitizePageSnapshot(result) {
-    result.title = sanitizeField("Title", result.title);
-    result.metaDescriptions = sanitizeField("Meta Description", result.metaDescriptions);
-    result.h1s = sanitizeField("H1", result.h1s);
-    result.h2s = sanitizeField("H2", result.h2s);
+function update(currentValue) {
+    if (currentValue.title) currentValue.title = sanitizeField("Title", currentValue.title);
+    if (currentValue.metaDescriptions) currentValue.metaDescriptions = sanitizeField("Meta Description", currentValue.metaDescriptions);
+    if (currentValue.h1s) currentValue.h1s = sanitizeField("H1", currentValue.h1s);
+    if (currentValue.h2s) currentValue.h2s = sanitizeField("H2", currentValue.h2s);
+}
+
+function sanitizePageCrawl(result) {
+    if (result.title.value) result.title.value = sanitizeField("Title", result.title.value);
+    if (result.metaDescriptions.value) result.metaDescriptions.value = sanitizeField("Meta Description", result.metaDescriptions.value);
+    if (result.h1s.value) result.h1s.value = sanitizeField("H1", result.h1s.value);
+    if (result.h2s.value) result.h2s.value = sanitizeField("H2", result.h2s.value);
 }
 
 function getBulkSizeDescription(bulk) {

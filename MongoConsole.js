@@ -27,7 +27,7 @@ module.exports = class MongoConsole {
 
             console.time("initbulk");
             const db = client.db(dbName);
-            const collection = db.collection('pageCrawl');
+            const collection = db.collection('monitoredUri');
             let bulk = collection.initializeUnorderedBulkOp();
             console.timeEnd("initbulk");
 
