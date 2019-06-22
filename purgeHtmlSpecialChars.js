@@ -3,6 +3,7 @@ const MongoConsole = require("./MongoConsole.js");
 const Entities = require('html-entities').AllHtmlEntities;
 const c = require('ansi-colors');
 const entities = new Entities();
+const htmlToText = require('html-to-text');
 
 let mongoConsole = new MongoConsole();
 
@@ -13,14 +14,15 @@ String.prototype.replaceAll = function (search, replacement) {
 
 // var pattern = /&#?[\w\d]+;/g;
 // var pattern = /[\n\r]/g;
-var pattern = /[ ]{2,}/g;
+// var pattern = /[ ]{2,}/g;
+var pattern = /</g;
 
 var query = {
     $or: [
-        {"title": pattern},
-        {"metaDescriptions": pattern},
-        {"h1s": pattern},
-        {"h2s": pattern}
+        {"title.value": pattern},
+        {"metaDescriptions.value": pattern},
+        {"h1s.value": pattern},
+        {"h2s.value": pattern}
     ]
 };
 
@@ -61,10 +63,7 @@ async function processNextPage(skip = 0, limit = 0) {
             // console.log(
             // console.log(highlight(util.inspect(result, {colors: true, depth: 4})));
 
-            result.title = sanitizeField("Title", result.title);
-            result.metaDescriptions = sanitizeField("Meta Description", result.metaDescriptions);
-            result.h1s = sanitizeField("H1", result.h1s);
-            result.h2s = sanitizeField("H2", result.h2s);
+            sanitizePageCrawl(result);
 
             // console.log("New value is:")
             // console.logj(result);
@@ -82,6 +81,20 @@ async function processNextPage(skip = 0, limit = 0) {
 
 
     return totalUpdates;
+}
+
+function sanitizePageCrawl(result) {
+    if(result.title.value) result.title.value = sanitizeField("Title", result.title.value);
+    if(result.metaDescriptions.value) result.metaDescriptions.value = sanitizeField("Meta Description", result.metaDescriptions.value);
+    if(result.h1s.value) result.h1s.value = sanitizeField("H1", result.h1s.value);
+    if(result.h2s.value) result.h2s.value = sanitizeField("H2", result.h2s.value);
+}
+
+function sanitizePageSnapshot(result) {
+    result.title = sanitizeField("Title", result.title);
+    result.metaDescriptions = sanitizeField("Meta Description", result.metaDescriptions);
+    result.h1s = sanitizeField("H1", result.h1s);
+    result.h2s = sanitizeField("H2", result.h2s);
 }
 
 function getBulkSizeDescription(bulk) {
@@ -108,13 +121,14 @@ function sanitizeField(fieldName, field) {
 function sanitizeItem(fieldName, item) {
     let sanitized = sanitize(item);
     // if (item !== sanitized) {
-    //     console.log("Changing " + fieldName + ":\n\t", "'" + highlight(item) + "'", "\n\t " + "'" + sanitize(item) + "'");
+    //     console.log("Changing " + fieldName + ":", "'" + highlight(item) + "'", c.bold(c.blueBright("=> ")) + "'" + sanitized + "'");
     // }
     return sanitized;
 }
 
 function highlight(str) {
-    return str.replace(/(&#?[\w\d]+;?)/g, function (s, entity) {
+    ///old: (&#?[\w\d]+;?)/g
+    return str.replace(/(<[^>]*>?)/g, function (s, entity) {
         return c.red(entity);
     });
 }
@@ -128,6 +142,7 @@ function removeLineBreaks(str) {
 }
 
 function sanitize(string) {
+    string = htmlToText.fromString(string);
     return removeDoubleSpaces(removeLineBreaks(entities.decode(string))).trim();
 }
 

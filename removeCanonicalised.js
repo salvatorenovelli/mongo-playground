@@ -46,7 +46,7 @@ async function asyncForEach(array, callback) {
     try {
 
 
-        const filter = {workspaceNumber: 63, "currentValue.canonicals.0": {$exists: true}};
+        const filter = {"currentValue.canonicals.0": {$exists: true}};
 
         const client = new MongoClient(url, {useNewUrlParser: true});
 
