@@ -26,7 +26,7 @@ var queryPageCrawl = {
     ]
 };
 
-var queryMonitoredUri = {
+var query = {
     $or: [
         {"currentValue.title": pattern},
         {"currentValue.metaDescriptions": pattern},
@@ -60,7 +60,7 @@ async function processNextPage(skip = 0, limit = 0) {
     let totalUpdates = 0;
     let skipNotified = false;
 
-    await mongoConsole.find(queryMonitoredUri, (result, collection, bulk) => {
+    await mongoConsole.find(query, (result, collection, bulk) => {
 
         //console.logj(bulk);
         if (bulk.s.currentBatch == null) {

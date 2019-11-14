@@ -12,39 +12,15 @@ String.prototype.replaceAll = function (search, replacement) {
     return target.replace(new RegExp(search, 'g'), replacement);
 };
 
-// var pattern = /&#?[\w\d]+;/g;
-// var pattern = /[\n\r]/g;
-// var pattern = /[ ]{2,}/g;
-var pattern = /</g;
 
-var queryPageCrawl = {
-    $or: [
-        {"title.value": pattern},
-        {"metaDescriptions.value": pattern},
-        {"h1s.value": pattern},
-        {"h2s.value": pattern}
-    ]
-};
-
-var queryMonitoredUri = {
-    $or: [
-        {"currentValue.title": pattern},
-        {"currentValue.metaDescriptions": pattern},
-        {"currentValue.h1s": pattern},
-        {"currentValue.h2s": pattern},
-        {"recommendation.title": pattern},
-        {"recommendation.metaDescriptions": pattern},
-        {"recommendation.h1s": pattern},
-        {"recommendation.h2s": pattern},
-    ]
-};
+let query = {host: {$exists: false}};
 
 
 (async function () {
 
     const pageSize = 5000.0;
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 1000; i++) {
         console.log("\n\nProcessing page: " + i);
         console.time("page");
         let recordUpdated = await processNextPage(0, pageSize);
@@ -60,7 +36,7 @@ async function processNextPage(skip = 0, limit = 0) {
     let totalUpdates = 0;
     let skipNotified = false;
 
-    await mongoConsole.find(queryMonitoredUri, (result, collection, bulk) => {
+    await mongoConsole.find('pageCrawl', query, (entity, collection, bulk) => {
 
         //console.logj(bulk);
         if (bulk.s.currentBatch == null) {
@@ -70,19 +46,27 @@ async function processNextPage(skip = 0, limit = 0) {
         }
 
         if (bulk.s.maxBatchSizeBytes - bulk.s.currentBatch.sizeBytes > 100000) {
-
-
-            // process.stdout.write("\nBulk Size " + getBulkSizeDescription(bulk) + " -- URL: " + result.uri + " " + result._id);
+            // process.stdout.write("\nBulk Size " + getBulkSizeDescription(bulk) + " -- URL: " + entity.uri + " " + entity._id);
             // console.log(
-            // console.log(highlight(util.inspect(result, {colors: true, depth: 4})));
+            // console.log(highlight(util.inspect(entity, {colors: true, depth: 4})));
 
-            sanitizeMonitoredUri(result);
 
-            // console.log("New value is:")
-            // console.logj(result);
+            if (entity.uri && entity.uri !== "") {
+                // console.log("Processing:", entity.uri);
+                try {
+                    entity.host = new URL(entity.uri).host;
+                } catch (e) {
+                    console.log("URI: '" + entity.uri + "'", entity);
+                    console.log("Exception: ", e);
+                }
 
-            bulk.find({"_id": result._id}).updateOne(result);
-            totalUpdates++;
+                // console.log("New value is:")
+                // console.log(entity);
+                bulk.find({"_id": entity._id}).updateOne(entity);
+                totalUpdates++;
+            }
+
+
         } else {
             if (!skipNotified) {
                 console.log("Max bulk size exceeded skipping this...");
@@ -90,33 +74,12 @@ async function processNextPage(skip = 0, limit = 0) {
             }
         }
 
-    }, skip, limit, 'monitoredUri');
+    }, skip, limit);
 
 
     return totalUpdates;
 }
 
-function sanitizeMonitoredUri(muri) {
-
-
-    if (muri.currentValue) update(muri.currentValue);
-    if (muri.recommendation) update(muri.recommendation);
-
-}
-
-function update(currentValue) {
-    if (currentValue.title) currentValue.title = sanitizeField("Title", currentValue.title);
-    if (currentValue.metaDescriptions) currentValue.metaDescriptions = sanitizeField("Meta Description", currentValue.metaDescriptions);
-    if (currentValue.h1s) currentValue.h1s = sanitizeField("H1", currentValue.h1s);
-    if (currentValue.h2s) currentValue.h2s = sanitizeField("H2", currentValue.h2s);
-}
-
-function sanitizePageCrawl(result) {
-    if (result.title.value) result.title.value = sanitizeField("Title", result.title.value);
-    if (result.metaDescriptions.value) result.metaDescriptions.value = sanitizeField("Meta Description", result.metaDescriptions.value);
-    if (result.h1s.value) result.h1s.value = sanitizeField("H1", result.h1s.value);
-    if (result.h2s.value) result.h2s.value = sanitizeField("H2", result.h2s.value);
-}
 
 function getBulkSizeDescription(bulk) {
     return bytesToSize(bulk.s.currentBatch.sizeBytes) + " / " + bytesToSize(bulk.s.maxBatchSizeBytes);

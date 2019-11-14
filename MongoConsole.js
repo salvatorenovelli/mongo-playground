@@ -14,7 +14,7 @@ const dbName = 'test-website-versioning';
 module.exports = class MongoConsole {
 
 
-    async find(query, forEachCallback, skip = 0, limit = 0) {
+    async find(collection, query, forEachCallback, skip = 0, limit = 0) {
 
 
         const client = new MongoClient(url, {useNewUrlParser: true});
@@ -27,7 +27,7 @@ module.exports = class MongoConsole {
 
             console.time("initbulk");
             const db = client.db(dbName);
-            const collection = db.collection('monitoredUri');
+            const collection = db.collection('pageCrawl');
             let bulk = collection.initializeUnorderedBulkOp();
             console.timeEnd("initbulk");
 
