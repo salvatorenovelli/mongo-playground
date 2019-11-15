@@ -36,7 +36,7 @@ async function processNextPage(skip = 0, limit = 0) {
     let totalUpdates = 0;
     let skipNotified = false;
 
-    await mongoConsole.find('pageCrawl', query, (entity, collection, bulk) => {
+    await mongoConsole.find('pageCrawl', query, {_id: true, "uri": true}, (entity, collection, bulk) => {
 
         //console.logj(bulk);
         if (bulk.s.currentBatch == null) {
@@ -52,18 +52,14 @@ async function processNextPage(skip = 0, limit = 0) {
 
 
             if (entity.uri && entity.uri !== "") {
-                // console.log("Processing:", entity.uri);
+                // console.log("Processing:", entity);
                 try {
-                    entity.host = new URL(entity.uri).host;
+                    bulk.find({"_id": entity._id}).updateOne({$set: {"host": new URL(entity.uri).host}});
+                    totalUpdates++;
                 } catch (e) {
                     console.log("URI: '" + entity.uri + "'", entity);
                     console.log("Exception: ", e);
                 }
-
-                // console.log("New value is:")
-                // console.log(entity);
-                bulk.find({"_id": entity._id}).updateOne(entity);
-                totalUpdates++;
             }
 
 
