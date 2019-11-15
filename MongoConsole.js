@@ -37,6 +37,7 @@ module.exports = class MongoConsole {
 
             while (await cursor.hasNext()) {
 
+                console.time("page");
                 console.time("query");
                 const docs = await cursor.toArray();
                 console.timeEnd("query");
@@ -48,6 +49,7 @@ module.exports = class MongoConsole {
                 console.time("executebulk");
                 await bulk.execute();
                 console.timeEnd("executebulk");
+                console.timeEnd("page");
                 console.log("\n")
 
             }
