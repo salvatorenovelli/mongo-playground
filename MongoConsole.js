@@ -14,54 +14,45 @@ const dbName = 'test-website-versioning';
 module.exports = class MongoConsole {
 
 
-    async find(collectionName, query, projection, forEachCallback, batchSize = 1) {
+    constructor(collectionName) {
+        this.collectionName = collectionName;
+    }
 
+    async connect() {
+        this.client = new MongoClient(url, {useNewUrlParser: true});
+        console.time("connect");
+        await this.client.connect();
+        console.log("Connected correctly to server");
+        console.timeEnd("connect");
+        const db = this.client.db(dbName);
+        this.collection = db.collection(this.collectionName);
+    }
 
-        const client = new MongoClient(url, {useNewUrlParser: true});
-
+    async find(query, projection, forEachCallback, skip = 0, limit = 0) {
         try {
-            console.time("connect");
-            await client.connect();
-            console.log("Connected correctly to server");
-            console.timeEnd("connect");
+            console.time("init bulk");
+            let bulk = this.collection.initializeUnorderedBulkOp();
+            console.timeEnd("init bulk");
 
-            console.time("initbulk");
-            const db = client.db(dbName);
-            const collection = db.collection(collectionName);
-            let bulk = collection.initializeUnorderedBulkOp();
-            console.timeEnd("initbulk");
+            console.time("query");
+            const docs = await this.collection.find(query).project(projection).skip(skip).limit(limit).toArray();
+            console.timeEnd("query");
 
-            let cursor = collection.find(query).project(projection).limit(batchSize);
+            console.time("processing");
+            docs.forEach(results => forEachCallback(results, this.collection, bulk));
+            console.timeEnd("processing");
 
-            // const docs = await collection.find(query).project(projection).skip(0).limit(limit).toArray();
-
-            while (await cursor.hasNext()) {
-
-                console.time("page");
-                console.time("query");
-                const docs = await cursor.toArray();
-                console.timeEnd("query");
-
-                console.time("processing");
-                docs.forEach(entity => forEachCallback(entity, collection, bulk));
-                console.timeEnd("processing");
-
-                console.time("executebulk");
-                await bulk.execute();
-                console.timeEnd("executebulk");
-                console.timeEnd("page");
-                console.log("\n")
-
-            }
-
+            console.time("execute bulk");
+            await bulk.execute();
+            console.timeEnd("execute bulk");
 
         } catch (err) {
             console.error(err.stack);
         }
+    }
 
-        return client.close(false);
-
-
+    async close() {
+        return this.client.close(false);
     }
 };
 

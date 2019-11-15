@@ -5,7 +5,6 @@ const c = require('ansi-colors');
 const entities = new Entities();
 const htmlToText = require('html-to-text');
 
-let mongoConsole = new MongoConsole();
 
 String.prototype.replaceAll = function (search, replacement) {
     var target = this;
@@ -19,24 +18,28 @@ let query = {host: {$exists: false}};
 (async function () {
 
     const pageSize = 5000.0;
+    let mongoConsole = new MongoConsole("pageCrawl");
+    await mongoConsole.connect();
 
     for (let i = 0; i < 1000; i++) {
         console.log("\n\nProcessing page: " + i);
         console.time("page");
-        let recordUpdated = await processNextPage(0, pageSize);
+        let recordUpdated = await processNextPage(mongoConsole, 0, pageSize);
         console.log("Updated ", recordUpdated, " records");
         console.timeEnd("page");
     }
 
+    await mongoConsole.close();
+
 })();
 
 
-async function processNextPage(skip = 0, limit = 0) {
+async function processNextPage(mongoConsole, skip = 0, limit = 0) {
 
     let totalUpdates = 0;
     let skipNotified = false;
 
-    await mongoConsole.find('pageCrawl', query, {_id: true, "uri": true}, (entity, collection, bulk) => {
+    await mongoConsole.find(query, {_id: true, "uri": true}, (entity, collection, bulk) => {
 
         //console.logj(bulk);
         if (bulk.s.currentBatch == null) {
@@ -49,7 +52,6 @@ async function processNextPage(skip = 0, limit = 0) {
             // process.stdout.write("\nBulk Size " + getBulkSizeDescription(bulk) + " -- URL: " + entity.uri + " " + entity._id);
             // console.log(
             // console.log(highlight(util.inspect(entity, {colors: true, depth: 4})));
-
 
             if (entity.uri && entity.uri !== "") {
                 // console.log("Processing:", entity);
