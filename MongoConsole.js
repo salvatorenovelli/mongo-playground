@@ -14,7 +14,7 @@ const dbName = 'test-website-versioning';
 module.exports = class MongoConsole {
 
 
-    async find(collection, query, projection, forEachCallback, skip = 0, limit = 0) {
+    async find(collectionName, query, projection, forEachCallback, batchSize = 1) {
 
 
         const client = new MongoClient(url, {useNewUrlParser: true});
@@ -27,23 +27,30 @@ module.exports = class MongoConsole {
 
             console.time("initbulk");
             const db = client.db(dbName);
-            const collection = db.collection('pageCrawl');
+            const collection = db.collection(collectionName);
             let bulk = collection.initializeUnorderedBulkOp();
             console.timeEnd("initbulk");
 
-            console.time("query");
-            const docs = await collection.find(query).project(projection).skip(skip).limit(limit).toArray();
-            console.timeEnd("query");
+            let cursor = collection.find(query).project(projection).limit(batchSize);
 
+            // const docs = await collection.find(query).project(projection).skip(0).limit(limit).toArray();
 
-            console.time("processing");
-            docs.forEach(entity => forEachCallback(entity, collection, bulk));
-            console.timeEnd("processing");
+            while (await cursor.hasNext()) {
 
+                console.time("query");
+                const docs = await cursor.toArray();
+                console.timeEnd("query");
 
-            console.time("executebulk");
-            await bulk.execute();
-            console.timeEnd("executebulk");
+                console.time("processing");
+                docs.forEach(entity => forEachCallback(entity, collection, bulk));
+                console.timeEnd("processing");
+
+                console.time("executebulk");
+                await bulk.execute();
+                console.timeEnd("executebulk");
+                console.log("\n")
+
+            }
 
 
         } catch (err) {

@@ -19,14 +19,53 @@ let query = {host: {$exists: false}};
 (async function () {
 
     const pageSize = 5000.0;
+    let totalUpdates = 0;
+    let skipNotified = false;
 
-    for (let i = 0; i < 1000; i++) {
-        console.log("\n\nProcessing page: " + i);
-        console.time("page");
-        let recordUpdated = await processNextPage(0, pageSize);
-        console.log("Updated ", recordUpdated, " records");
-        console.timeEnd("page");
-    }
+    await mongoConsole.find('pageCrawl', query, {_id: true, "uri": true}, (entity, collection, bulk) => {
+
+        //console.logj(bulk);
+        if (bulk.s.currentBatch == null) {
+            bulk.s.currentBatch = {
+                sizeBytes: 0
+            }
+        }
+
+        if (bulk.s.maxBatchSizeBytes - bulk.s.currentBatch.sizeBytes > 100000) {
+            // process.stdout.write("\nBulk Size " + getBulkSizeDescription(bulk) + " -- URL: " + entity.uri + " " + entity._id);
+            // console.log(
+            // console.log(highlight(util.inspect(entity, {colors: true, depth: 4})));
+
+
+            if (entity.uri && entity.uri !== "") {
+                // console.log("Processing:", entity);
+                try {
+                    bulk.find({"_id": entity._id}).updateOne({$set: {"host": new URL(entity.uri).host}});
+                    totalUpdates++;
+                } catch (e) {
+                    console.log("URI: '" + entity.uri + "'", entity);
+                    console.log("Exception: ", e);
+                }
+            }
+
+
+        } else {
+            if (!skipNotified) {
+                console.log("Max bulk size exceeded skipping this...");
+                skipNotified = true;
+            }
+        }
+
+    }, pageSize);
+
+
+    // for (let i = 0; i < 1000; i++) {
+    //     console.log("\n\nProcessing page: " + i);
+    //     console.time("page");
+    //     let recordUpdated = await processNextPage(0, pageSize);
+    //     console.log("Updated ", recordUpdated, " records");
+    //     console.timeEnd("page");
+    // }
 
 })();
 
@@ -52,7 +91,7 @@ async function processNextPage(skip = 0, limit = 0) {
 
 
             if (entity.uri && entity.uri !== "") {
-                // console.log("Processing:", entity);
+                console.log("Processing:", entity);
                 try {
                     bulk.find({"_id": entity._id}).updateOne({$set: {"host": new URL(entity.uri).host}});
                     totalUpdates++;
