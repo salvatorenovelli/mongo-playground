@@ -19,16 +19,17 @@ module.exports = class MongoConsole {
     }
 
     async connect() {
-        this.client = new MongoClient(url, {useNewUrlParser: true});
+        this.client = new MongoClient(url, {useNewUrlParser: true, useUnifiedTopology: true});
         console.time("connect");
         await this.client.connect();
         console.log("Connected correctly to server");
-        console.timeEnd("connect");
         const db = this.client.db(dbName);
         this.collection = db.collection(this.collectionName);
+        console.timeEnd("connect");
     }
 
-    async find(query, projection, forEachCallback, skip = 0, limit = 0) {
+
+    async bulkProcess(query, projection, forEachCallback, skip = 0, limit = 0) {
         try {
             console.time("init bulk");
             let bulk = this.collection.initializeUnorderedBulkOp();
