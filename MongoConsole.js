@@ -9,38 +9,38 @@ const MongoClient = require('mongodb').MongoClient;
 
 
 const url = "mongodb://localhost:9000";
-const dbName = 'test-website-versioning';
+const dbName = 'website-versioning';
 
 module.exports = class MongoConsole {
 
-
-    constructor(collectionName) {
-        this.collectionName = collectionName;
-    }
 
     async connect() {
         this.client = new MongoClient(url, {useNewUrlParser: true, useUnifiedTopology: true});
         console.time("connect");
         await this.client.connect();
         console.log("Connected correctly to server");
-        const db = this.client.db(dbName);
-        this.collection = db.collection(this.collectionName);
+        this.db = this.client.db(dbName);
         console.timeEnd("connect");
     }
 
+    async getCollection(collectionName) {
+        return this.db.collection(collectionName);
+    }
 
-    async bulkProcess(query, projection, forEachCallback, skip = 0, limit = 0) {
+
+    async bulkProcess(collectionName, query, projection, forEachCallback, skip = 0, limit = 0) {
+        const collection = this.getCollection(collectionName);
         try {
             console.time("init bulk");
-            let bulk = this.collection.initializeUnorderedBulkOp();
+            let bulk = collection.initializeUnorderedBulkOp();
             console.timeEnd("init bulk");
 
             console.time("query");
-            const docs = await this.collection.find(query).project(projection).skip(skip).limit(limit).toArray();
+            const docs = await collection.find(query).project(projection).skip(skip).limit(limit).toArray();
             console.timeEnd("query");
 
             console.time("processing");
-            docs.forEach(results => forEachCallback(results, this.collection, bulk));
+            docs.forEach(results => forEachCallback(results, collection, bulk));
             console.timeEnd("processing");
 
             console.time("execute bulk");
