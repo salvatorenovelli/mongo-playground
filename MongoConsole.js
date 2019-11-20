@@ -9,7 +9,7 @@ const MongoClient = require('mongodb').MongoClient;
 
 
 const url = "mongodb://localhost:9000";
-const dbName = 'website-versioning';
+const dbName = 'test-website-versioning';
 
 module.exports = class MongoConsole {
 
